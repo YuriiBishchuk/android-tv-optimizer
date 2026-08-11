@@ -1,5 +1,6 @@
-# Temporary & APK Downloads
+# Exclude all binary APK files
 *.apk
-!browsehere.apk
+
+# Logs & temp
 *.log
 .DS_Store
