@@ -24,6 +24,7 @@ android-tv-optimizer/
 │   ├── _template.conf          # шаблон для нового ТВ
 │   └── xiaomi_a_pro_2026.conf  # Xiaomi TV A Pro 2026 (MiTV-MZTU0/river, MT9676, Android 14)
 ├── scripts/
+│   ├── audit.sh                  # УНІВЕРСАЛЬНИЙ аудит tiers + --apply-tier1 / --apply-bloat
 │   ├── debloat.sh              # safe uninstall --user 0 по списку з devices/*.conf
 │   ├── set-home.sh             # призначення HOME (role + preferred, емуляція ручного вибору)
 │   ├── verify.sh               # перевірка: HOME / focused / RAM / disabled
@@ -34,6 +35,7 @@ android-tv-optimizer/
 ├── docs/
 │   ├── BOOT_FLASH.md           # чому сток блимає 0.5с перед Projectivy — це ок
 │   ├── HOME_CHOOSER.md         # чому немає вікна вибору лаунчера — це ок
+│   ├── COMMUNITY_LISTS.md      # community-списки деблоку + мапінг на наш ТВ
 │   ├── CRASH_2026-09-27.md     # system_server android.display Task.moveToBack — розбір
 │   └── TELEMETRY_STATUS.md     # що мертве / що живе після деблоку
 └── evidence/2026-09-27_xiaomi-a-pro/
@@ -51,6 +53,11 @@ sudo apt install android-tools-adb
 adb connect 192.168.0.103:5555
 adb devices -l
 adb shell echo ok
+
+# 2a. Аудит "що можна почистити" (read-only, tiers з community + живий тест)
+TV_IP=192.168.0.103:5555 ./scripts/audit.sh
+# ТІЛЬКИ tier1 (підтверджені): TV_IP=... ./scripts/audit.sh --apply-tier1
+# Зі свого файла: TV_IP=... ./scripts/audit.sh --apply-bloat bloat.txt
 
 # 3. Деблок (dry-run за замовчуванням нічого не видаляє без --apply)
 DEVICE_CONF=devices/xiaomi_a_pro_2026.conf ./scripts/debloat.sh --apply
