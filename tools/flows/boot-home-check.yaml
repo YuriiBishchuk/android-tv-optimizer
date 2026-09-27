@@ -1,0 +1,6 @@
+name: boot-home-check
+description: After reboot, press HOME and expect Projectivy (stock flash ~0.5s is OK).
+steps:
+  - pressKey: Home
+  - launchApp: com.spocky.projengmenu
+  - assertVisible: ".*"

@@ -1,6 +1,7 @@
-# Exclude all binary APK files
 *.apk
-
-# Logs & temp
+out/
+cap.png
+ui.xml
 *.log
 .DS_Store
+

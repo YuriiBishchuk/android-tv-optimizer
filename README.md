@@ -1,123 +1,92 @@
-# 🚀 KIVI Kids TV (Android 14) — Optimization & Debloat Guide
+# 📺 Android TV Optimizer (generic, no vendor lock-in)
 
-![Platform](https://img.shields.io/badge/Platform-Android%20TV%2014-blue)
-![Device](https://img.shields.io/badge/Device-KIVI%20Kids%20TV-green)
+Універсальний інструментарій для деблоку / тюнінгу Android TV / Google TV
+з кастомним лаунчером (Projectivy) як HOME за замовчуванням.
+
+> Попередня назва `kivi-tv-optimizer` була прив'язана до одного вендора.
+> Цей репозиторій — **перестворений з нуля під generic-назвою**,
+> конфіг під конкретний телевізор лежить в `devices/*.conf`,
+> код вендор-нейтральний.
+
+![Platform](https://img.shields.io/badge/Platform-Android_TV_14-blue)
 ![License](https://img.shields.io/badge/License-MIT-orange)
-![Security](https://img.shields.io/badge/Security-0%25%20Russian%20Software-brightgreen)
 
-Повний посібник та інтерактивний скрипт для очищення від рекламного ПЗ (Debloat), зняття системних затримок, оптимізації RAM/zRAM та встановлення надшвидкого **Projectivy Launcher** на телевізори **KIVI Kids TV / KIVI 2K Android TV**.
+> Репозиторій перейменовано з `kivi-tv-optimizer` в `android-tv-optimizer`.
+> Старі KIVI-скрипти лишились в історії git, новий код — `scripts/*` + `devices/*`.
 
----
 
-## 📺 Протестований пристрій
+## Структура
 
-| Параметр | Значення |
-| :--- | :--- |
-| **Модель** | KIVI Kids TV (`KIVI 2K Android TV`) |
-| **Чипсет** | MediaTek MSD9216PA |
-| **Android OS** | Android TV 14 (Збірка `UKNV.260512.001`, Патч безпеки: Червень 2026) |
-| **RAM** | 1 ГБ DDR3 + 700 МБ zRAM (стиснення ~10x) |
-| **Роздільна здатність** | Full HD 1920×1080 @ 60 Hz |
+```
+android-tv-optimizer/
+├── README.md
+├── devices/
+│   ├── _template.conf          # шаблон для нового ТВ
+│   └── xiaomi_a_pro_2026.conf  # Xiaomi TV A Pro 2026 (MiTV-MZTU0/river, MT9676, Android 14)
+├── scripts/
+│   ├── debloat.sh              # safe uninstall --user 0 по списку з devices/*.conf
+│   ├── set-home.sh             # призначення HOME (role + preferred, емуляція ручного вибору)
+│   ├── verify.sh               # перевірка: HOME / focused / RAM / disabled
+│   └── boot-diag.sh            # діагностика splash-loop (logcat crash/system/events + dumpsys)
+├── tools/flows/
+│   ├── home-check.yaml
+│   └── boot-home-check.yaml
+├── docs/
+│   ├── BOOT_FLASH.md           # чому сток блимає 0.5с перед Projectivy — це ок
+│   ├── HOME_CHOOSER.md         # чому немає вікна вибору лаунчера — це ок
+│   ├── CRASH_2026-09-27.md     # system_server android.display Task.moveToBack — розбір
+│   └── TELEMETRY_STATUS.md     # що мертве / що живе після деблоку
+└── evidence/2026-09-27_xiaomi-a-pro/
+    └── STATE.md                # сирі факти з ADB на момент 14:22 27.09.2026
+```
 
----
+## Швидкий старт
 
-## 🌟 Що робить скрипт
-
-- 🧹 **Debloat** — видалення 15+ рекламних та шпигунських пакетів (`kivi.media`, `tv.anoki.acr.anokiacroptin`, демо-режими тощо)
-- 🏠 **Projectivy Launcher** — повна заміна важкого `com.google.android.tvlauncher`, фіксація кнопки **Home**
-- ⚡ **Прискорення UI** — анімації `0.5x`, примусовий GPU 2D рендеринг
-- 📉 **Оптимізація RAM** — ліміт кешованих процесів (макс. 2), звільнення 350+ МБ фізичної пам'яті
-- 🌐 **Браузер** — встановлення **BrowseHere (TCL Official)**, легкий (73 МБ RAM), керування D-Pad пультом
-- 🛡️ **Безпека** — нуль російського ПЗ, офіційна клавіатура Google Gboard
-
----
-
-## ⚙️ Передумови
-
-### На комп'ютері (Linux / macOS / Windows):
 ```bash
-# Ubuntu / Debian
+# 1. ADB
 sudo apt install android-tools-adb
+# На ТВ: Параметри розробника → USB/Wireless Debugging → ON, записати IP:порт
 
-# Arch / Manjaro
-sudo pacman -S android-tools
+# 2. Підключення (порт динамічний для Wireless Debugging!)
+adb connect 192.168.0.103:5555
+adb devices -l
+adb shell echo ok
 
-# macOS (Homebrew)
-brew install android-platform-tools
+# 3. Деблок (dry-run за замовчуванням нічого не видаляє без --apply)
+DEVICE_CONF=devices/xiaomi_a_pro_2026.conf ./scripts/debloat.sh --apply
+
+# 4. HOME = Projectivy (ідентично ручному вибору в чойзері)
+DEVICE_CONF=devices/xiaomi_a_pro_2026.conf ./scripts/set-home.sh
+
+# 5. Перевірка
+TV_IP=192.168.0.103:5555 ./scripts/verify.sh
+TV_IP=192.168.0.103:5555 ./scripts/boot-diag.sh
 ```
 
-### На телевізорі KIVI:
-1. **Налаштування → Про телевізор → Збірка** — натисніть **7 разів** для увімкнення режиму розробника.
-2. **Налаштування → Параметри розробника → Налагодження через USB** — **Увімкнути**.
-3. **Налаштування → Параметри розробника → Налагодження через мережу** — **Увімкнути**, записати IP-адресу ТВ.
+## Правила безпеки
 
----
+1. **Ніколи не `disable` останній fallback-HOME.** Стоковий `launcherx` лишається `enabled`
+   як запасний, дефолт — Projectivy (`mAlways=true` + `Role HOME`).
+2. **Не чіпати відео-стек** (`mitv.service`, `livetv`, `videoplayer`, `setup`) — без них немає HDMI/Live.
+3. **Не чіпати `setupwraith`** — системний сетап-трекер, потрібен після резета.
+4. Projectivy-розкладка (MEGOGO перший, тільки MEGOGO + YouTube + HDMI) — **вручну пультом**
+   (long-OK → Move/Hide), бо пакет не debuggable (`run-as` не працює). ADB це не пропише.
+5. Не заходити без потреби в `Projectivy → Android Settings` — саме там ловився
+   `FATAL android.display positionChildAt` 27.09.2026 (див. `docs/CRASH_2026-09-27.md`).
 
-## 🚀 Запуск
+## Протестовані пристрої
 
-```bash
-git clone https://github.com/YuriiBishchuk/kivi-tv-optimizer.git
-cd kivi-tv-optimizer
-chmod +x kivi_optimizer.sh
-./kivi_optimizer.sh
-```
+| Дата | Пристрій | SoC / OS | Результат |
+|------|----------|----------|-----------|
+| 2026-05 | KIVI Kids TV (KIVI 2K Android TV, MSD9216PA) | Android TV 14 | RAM ~15МБ → ~302МБ, Projectivy default |
+| 2026-09-27 | Xiaomi TV A Pro 2026 (MiTV-MZTU0/river) | MT9676, Android TV 14 SDK34 | telemetry мертва, Projectivy default, блим стоку 0.5с = ок |
 
-### Інтерактивне меню:
-```
-==================================================================
-       🚀 KIVI Kids TV (Android 14) Optimizer & Debloater
-==================================================================
+## Legacy (KIVI)
 
-1) ⚡ Повна автоматична оптимізація (Debloat + Tweaks + Launcher)
-2) 🧹 Очистити лише Bloatware та трекери
-3) 🚀 Застосувати системні твіки прискорення
-4) 🏠 Налаштувати Projectivy Launcher за замовчуванням
-5) 🌐 Встановити браузер BrowseHere (TCL Official)
-6) 📊 Моніторинг системи (RAM, CPU, Температура)
-7) 🔄 Відновити видалений пакет
-8) 🚪 Вихід
-```
-
----
-
-## 📋 Видалені пакети (Debloat List)
-
-| Пакет | Опис | Стан |
-| :--- | :--- | :--- |
-| `kivi.media` | Промо-медіацентр KIVI | 🛑 Видалено |
-| `tv.anoki.acr.anokiacroptin` | Трекер Anoki ACR | 🛑 Видалено |
-| `fusion.android.tv.demo` | Демо-режим для магазинів | 🛑 Видалено |
-| `com.google.android.tvlauncher` | Системний лаунчер Google TV | 🛑 Вимкнено |
-| `com.google.android.tvrecommendations` | Фонові рекомендації Google | 🛑 Видалено |
-| `com.amazon.amazonvideo.livingroom` | Amazon Prime Video | 🛑 Видалено |
-| `com.boosteroidtv.streaming` | Boosteroid Cloud Gaming | 🛑 Видалено |
-| `com.airconsole.androidtv` | AirConsole Games | 🛑 Видалено |
-| `com.hitv.explore` | HiTV | 🛑 Видалено |
-| `com.davincikids.tv` | DaVinci Kids | 🛑 Видалено |
-| `org.liskovsoft.androidtv.rukeyboard` | Клавіатура RuKeyboard | 🛑 Видалено |
-
----
-
-## 📊 Результати оптимізації
-
-| Метрика | До | Після |
-| :--- | :--- | :--- |
-| **Вільна фізична RAM** | ~15 МБ | **~302 МБ** |
-| **Затримка анімації** | ~1.5 с | **~0.3 с** |
-| **Головний екран** | Google TV + реклама | **Projectivy Launcher** |
-| **Вільний zRAM** | ~300 МБ | **~378 МБ** |
-
----
-
-## 🔄 Відновлення пакету
-
-```bash
-adb connect <IP_телевізора>:5555
-adb shell pm install-existing --user 0 com.google.android.tvlauncher
-```
-
----
+Старі скрипти (`kivi_optimizer.sh`, `debloat.sh`, `packages.txt`, APK) лишаються
+в історії git до перейменування. Новий код — `scripts/*` + `devices/*`.
 
 ## 📄 Ліцензія
 
 [MIT](LICENSE) — вільне використання та поширення.
+

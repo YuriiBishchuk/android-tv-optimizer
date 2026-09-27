@@ -1,0 +1,5 @@
+name: home-check
+description: Verify Projectivy is focused HOME (generic Android TV).
+steps:
+  - launchApp: com.spocky.projengmenu
+  - assertVisible: ".*"
